@@ -3,7 +3,7 @@ import { App, Button, Card, Col, Descriptions, Image, Row, Space, Tag, Timeline 
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RejectReasonModal } from '../components/RejectReasonModal';
-import { approveReview, fetchReviewDetail, rejectReview } from '../services/api';
+import { approveReview, fetchReviewDetail, offlineReview, rejectReview } from '../services/api';
 import type { ReviewDetail } from '../services/types';
 
 function renderStructuredFieldBlock(detail: ReviewDetail) {
@@ -31,6 +31,7 @@ export function ReviewDetailPage() {
   const [loading, setLoading] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const [offlineSubmitting, setOfflineSubmitting] = useState(false);
   const navigate = useNavigate();
   const { message } = App.useApp();
 
@@ -60,6 +61,9 @@ export function ReviewDetailPage() {
     return <Card loading={loading} />;
   }
 
+  const canReview = detail.status === 'PENDING';
+  const canOffline = detail.status === 'APPROVED';
+
   return (
     <div className="page-shell">
       <div className="page-header">
@@ -69,22 +73,41 @@ export function ReviewDetailPage() {
         </div>
         <Space>
           <Button onClick={() => navigate(-1)}>返回列表</Button>
-          <Button
-            type="primary"
-            onClick={async () => {
-              await approveReview(detail.id);
-              await message.success('审核已通过');
-              navigate('/reviews');
-            }}
-          >
-            审核通过
-          </Button>
-          <Button
-            danger
-            onClick={() => setRejectOpen(true)}
-          >
-            审核拒绝
-          </Button>
+          {canReview ? (
+            <>
+              <Button
+                type="primary"
+                onClick={async () => {
+                  await approveReview(detail.id);
+                  await message.success('审核已通过');
+                  navigate('/reviews');
+                }}
+              >
+                审核通过
+              </Button>
+              <Button danger onClick={() => setRejectOpen(true)}>
+                审核拒绝
+              </Button>
+            </>
+          ) : null}
+          {canOffline ? (
+            <Button
+              danger
+              loading={offlineSubmitting}
+              onClick={async () => {
+                setOfflineSubmitting(true);
+                try {
+                  await offlineReview(detail.id, '内容过期或人工下架');
+                  await message.success('已执行下架');
+                  navigate('/online');
+                } finally {
+                  setOfflineSubmitting(false);
+                }
+              }}
+            >
+              手动下架
+            </Button>
+          ) : null}
         </Space>
       </div>
       <Row gutter={16}>
@@ -146,22 +169,24 @@ export function ReviewDetailPage() {
           </Card>
         </Col>
       </Row>
-      <RejectReasonModal
-        open={rejectOpen}
-        loading={rejectSubmitting}
-        onCancel={() => setRejectOpen(false)}
-        onConfirm={async (reason) => {
-          setRejectSubmitting(true);
-          try {
-            await rejectReview(detail.id, reason);
-            await message.success('已拒绝');
-            setRejectOpen(false);
-            navigate('/reviews');
-          } finally {
-            setRejectSubmitting(false);
-          }
-        }}
-      />
+      {canReview ? (
+        <RejectReasonModal
+          open={rejectOpen}
+          loading={rejectSubmitting}
+          onCancel={() => setRejectOpen(false)}
+          onConfirm={async (reason) => {
+            setRejectSubmitting(true);
+            try {
+              await rejectReview(detail.id, reason);
+              await message.success('已拒绝');
+              setRejectOpen(false);
+              navigate('/reviews');
+            } finally {
+              setRejectSubmitting(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
