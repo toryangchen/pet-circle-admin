@@ -1,13 +1,16 @@
 export type PostType = 'PET_SOCIAL' | 'SERVICE';
 export type ServiceCategory = 'ADOPTION' | 'SECOND_HAND' | 'HOME_FEEDING' | 'BOARDING' | null;
 export type PostStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'OFFLINE' | 'COMPLETED';
+export type ReviewAction = 'APPROVE' | 'REJECT' | 'OFFLINE';
+export type UserStatus = 'ACTIVE' | 'DISABLED';
+export type AdminUserRole = 'SUPER_ADMIN' | 'OPERATOR';
 
 export type AdminSession = {
   token: string;
   user: {
     id: string;
     username: string;
-    role: string;
+    role: AdminUserRole;
   };
   isMock?: boolean;
 };
@@ -62,7 +65,7 @@ export type ReviewDetail = {
   reviewLogs: Array<{
     id: string;
     reviewerId: string;
-    action: string;
+    action: ReviewAction | 'PENDING';
     reason: string | null;
     createdAt: string;
   }>;
@@ -88,7 +91,7 @@ export type UserDetail = {
   phoneAuthorized: boolean;
   profileAuthorized: boolean;
   cityDefault: string | null;
-  status: string;
+  status: UserStatus;
   createdAt: string;
   postCount: number;
   recentPosts: Array<{

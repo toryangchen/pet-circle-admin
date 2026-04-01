@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type {
+  AdminUserRole,
   AdminSession,
   PagedResult,
+  PostStatus,
   ReviewDetail,
   ReviewListItem,
   UserDetail,
@@ -49,7 +51,7 @@ async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
 }
 
 export async function adminLogin(username: string, password: string): Promise<AdminSession> {
-  const session = await unwrap<{ token: string; user: AdminSession['user'] }>(
+  const session = await unwrap<{ token: string; user: { id: string; username: string; role: AdminUserRole } }>(
     client.post('/admin/auth/login', { username, password }),
   );
 
@@ -92,15 +94,15 @@ export async function fetchReviewDetail(postId: string) {
 }
 
 export async function approveReview(postId: string) {
-  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/approve`, {}));
+  return unwrap<{ id: string; status: PostStatus }>(client.post(`/admin/reviews/${postId}/approve`, {}));
 }
 
 export async function rejectReview(postId: string, reason: string) {
-  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/reject`, { reason }));
+  return unwrap<{ id: string; status: PostStatus }>(client.post(`/admin/reviews/${postId}/reject`, { reason }));
 }
 
 export async function offlineReview(postId: string, reason: string) {
-  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/offline`, { reason }));
+  return unwrap<{ id: string; status: PostStatus }>(client.post(`/admin/reviews/${postId}/offline`, { reason }));
 }
 
 export async function fetchUsers(params?: { page?: number; pageSize?: number; keyword?: string }) {
