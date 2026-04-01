@@ -232,6 +232,112 @@ describe('admin review flow pages', () => {
     });
   });
 
+  it('stays on the detail page when approve fails', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'HOME_FEEDING',
+      status: 'PENDING',
+      title: '待审核服务',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockApproveReview.mockRejectedValue(new Error('审核通过失败'));
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '审核通过' }));
+
+    await waitFor(() => {
+      expect(mockApproveReview).toHaveBeenCalledWith('post-1');
+      expect(mockMessageError).toHaveBeenCalledWith('审核通过失败');
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('stays on the detail page when reject fails', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'BOARDING',
+      status: 'PENDING',
+      title: '待审核寄养',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockRejectReview.mockRejectedValue(new Error('拒绝失败'));
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '审核拒绝' }));
+    const reasonInput = await screen.findByLabelText('拒绝原因');
+    fireEvent.change(reasonInput, {
+      target: {
+        value: '资料不完整，请补充联系方式',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认拒绝' }));
+
+    await waitFor(() => {
+      expect(mockRejectReview).toHaveBeenCalledWith('post-1', '资料不完整，请补充联系方式');
+      expect(mockMessageError).toHaveBeenCalledWith('拒绝失败');
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('stays on the detail page when offline fails', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'SECOND_HAND',
+      status: 'APPROVED',
+      title: '已上线闲置',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockOfflineReview.mockRejectedValue(new Error('下架失败'));
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '手动下架' }));
+
+    await waitFor(() => {
+      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '内容过期或人工下架');
+      expect(mockMessageError).toHaveBeenCalledWith('下架失败');
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('passes selected filters to the online posts query', async () => {
     mockFetchOnlinePosts.mockResolvedValue({
       items: [],
