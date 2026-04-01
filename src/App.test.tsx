@@ -1,0 +1,46 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it } from 'vitest';
+import App from './App';
+import { clearAdminSession, saveAdminSession } from './services/session';
+
+describe('admin route guards', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('redirects to login when there is no stored session', async () => {
+    render(
+      <MemoryRouter initialEntries={['/reviews']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: '登录进入审核工作台' })).toBeInTheDocument();
+  });
+
+  it('returns to login after the current session is cleared', async () => {
+    saveAdminSession({
+      token: 'token-for-test',
+      user: {
+        id: 'admin-1',
+        username: 'reviewer',
+        role: 'SUPER_ADMIN',
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/reviews']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('审核工作台')).toBeInTheDocument();
+
+    clearAdminSession();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '登录进入审核工作台' })).toBeInTheDocument();
+    });
+  });
+});
