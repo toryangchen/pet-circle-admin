@@ -1,4 +1,5 @@
 import { App as AntdApp, Layout, Menu, theme } from 'antd';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   CheckSquareOutlined,
   FileSearchOutlined,
@@ -6,13 +7,6 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
-import { LoginPage } from './pages/LoginPage';
-import { OnlinePostsPage } from './pages/OnlinePostsPage';
-import { ReviewDetailPage } from './pages/ReviewDetailPage';
-import { ReviewListPage } from './pages/ReviewListPage';
-import { UserDetailPage } from './pages/UserDetailPage';
-import { UsersPage } from './pages/UsersPage';
 import {
   ADMIN_SESSION_EVENT,
   clearAdminSession,
@@ -20,6 +14,48 @@ import {
 } from './services/session';
 
 const { Header, Sider, Content } = Layout;
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })),
+);
+const ReviewListPage = lazy(() =>
+  import('./pages/ReviewListPage').then((module) => ({
+    default: module.ReviewListPage,
+  })),
+);
+const ReviewDetailPage = lazy(() =>
+  import('./pages/ReviewDetailPage').then((module) => ({
+    default: module.ReviewDetailPage,
+  })),
+);
+const OnlinePostsPage = lazy(() =>
+  import('./pages/OnlinePostsPage').then((module) => ({
+    default: module.OnlinePostsPage,
+  })),
+);
+const UsersPage = lazy(() =>
+  import('./pages/UsersPage').then((module) => ({ default: module.UsersPage })),
+);
+const UserDetailPage = lazy(() =>
+  import('./pages/UserDetailPage').then((module) => ({
+    default: module.UserDetailPage,
+  })),
+);
+
+function RouteFallback() {
+  return (
+    <div
+      style={{
+        minHeight: '40vh',
+        display: 'grid',
+        placeItems: 'center',
+        color: '#6b7280',
+        fontSize: 14,
+      }}
+    >
+      页面加载中...
+    </div>
+  );
+}
 
 function ProtectedLayout() {
   const location = useLocation();
@@ -135,18 +171,20 @@ function ProtectedLayout() {
 export default function App() {
   return (
     <AntdApp>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedLayout />}>
-          <Route path="/" element={<Navigate to="/reviews" replace />} />
-          <Route path="/reviews" element={<ReviewListPage />} />
-          <Route path="/reviews/:postId" element={<ReviewDetailPage />} />
-          <Route path="/online" element={<OnlinePostsPage />} />
-          <Route path="/online/:postId" element={<ReviewDetailPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/users/:userId" element={<UserDetailPage />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<Navigate to="/reviews" replace />} />
+            <Route path="/reviews" element={<ReviewListPage />} />
+            <Route path="/reviews/:postId" element={<ReviewDetailPage />} />
+            <Route path="/online" element={<OnlinePostsPage />} />
+            <Route path="/online/:postId" element={<ReviewDetailPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users/:userId" element={<UserDetailPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </AntdApp>
   );
 }
