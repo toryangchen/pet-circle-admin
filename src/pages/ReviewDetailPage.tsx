@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Col, Descriptions, Image, Row, Space, Tag, Timeline } from 'antd';
+import { App, Button, Card, Col, Descriptions, Empty, Image, Row, Space, Tag, Timeline } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RejectReasonModal } from '../components/RejectReasonModal';
@@ -29,6 +29,7 @@ export function ReviewDetailPage() {
   const { postId = '' } = useParams();
   const [detail, setDetail] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [errorText, setErrorText] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const [offlineSubmitting, setOfflineSubmitting] = useState(false);
@@ -40,10 +41,18 @@ export function ReviewDetailPage() {
 
     void (async () => {
       setLoading(true);
+      setErrorText('');
       try {
         const nextDetail = await fetchReviewDetail(postId);
         if (!cancelled) {
           setDetail(nextDetail);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDetail(null);
+          const nextError = error instanceof Error ? error.message : '审核详情加载失败';
+          setErrorText(nextError);
+          await message.error(nextError);
         }
       } finally {
         if (!cancelled) {
@@ -55,10 +64,27 @@ export function ReviewDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [message, postId]);
+
+  if (loading) {
+    return <Card loading={loading} />;
+  }
 
   if (!detail) {
-    return <Card loading={loading} />;
+    return (
+      <div className="page-shell">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">审核详情</h1>
+            <div className="page-subtitle">查看内容、结构化字段与发布者信息后再执行审核。</div>
+          </div>
+          <Button onClick={() => navigate(-1)}>返回列表</Button>
+        </div>
+        <Card>
+          <Empty description={errorText || '未找到审核详情'} />
+        </Card>
+      </div>
+    );
   }
 
   const canReview = detail.status === 'PENDING';
@@ -78,9 +104,13 @@ export function ReviewDetailPage() {
               <Button
                 type="primary"
                 onClick={async () => {
-                  await approveReview(detail.id);
-                  await message.success('审核已通过');
-                  navigate('/reviews');
+                  try {
+                    await approveReview(detail.id);
+                    await message.success('审核已通过');
+                    navigate('/reviews');
+                  } catch (error) {
+                    await message.error(error instanceof Error ? error.message : '审核通过失败');
+                  }
                 }}
               >
                 审核通过
@@ -100,6 +130,8 @@ export function ReviewDetailPage() {
                   await offlineReview(detail.id, '内容过期或人工下架');
                   await message.success('已执行下架');
                   navigate('/online');
+                } catch (error) {
+                  await message.error(error instanceof Error ? error.message : '下架失败');
                 } finally {
                   setOfflineSubmitting(false);
                 }
@@ -181,6 +213,8 @@ export function ReviewDetailPage() {
               await message.success('已拒绝');
               setRejectOpen(false);
               navigate('/reviews');
+            } catch (error) {
+              await message.error(error instanceof Error ? error.message : '拒绝失败');
             } finally {
               setRejectSubmitting(false);
             }

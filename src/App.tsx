@@ -6,21 +6,25 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { OnlinePostsPage } from './pages/OnlinePostsPage';
 import { ReviewDetailPage } from './pages/ReviewDetailPage';
 import { ReviewListPage } from './pages/ReviewListPage';
 import { UserDetailPage } from './pages/UserDetailPage';
 import { UsersPage } from './pages/UsersPage';
-import { getStoredAdminSession, clearAdminSession } from './services/session';
+import {
+  ADMIN_SESSION_EVENT,
+  clearAdminSession,
+  getStoredAdminSession,
+} from './services/session';
 
 const { Header, Sider, Content } = Layout;
 
 function ProtectedLayout() {
-  const session = getStoredAdminSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const [session, setSession] = useState(() => getStoredAdminSession());
   const {
     token: { colorBgContainer, colorBorderSecondary },
   } = theme.useToken();
@@ -45,6 +49,20 @@ function ProtectedLayout() {
     ],
     [],
   );
+
+  useEffect(() => {
+    const syncSession = () => {
+      setSession(getStoredAdminSession());
+    };
+
+    window.addEventListener('storage', syncSession);
+    window.addEventListener(ADMIN_SESSION_EVENT, syncSession);
+
+    return () => {
+      window.removeEventListener('storage', syncSession);
+      window.removeEventListener(ADMIN_SESSION_EVENT, syncSession);
+    };
+  }, []);
 
   if (!session?.token) {
     return <Navigate to="/login" replace />;

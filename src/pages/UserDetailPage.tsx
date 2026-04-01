@@ -1,20 +1,67 @@
 import { useEffect, useState } from 'react';
-import { Card, Descriptions, List, Tag } from 'antd';
+import { App, Button, Card, Descriptions, Empty, List, Tag } from 'antd';
 import dayjs from 'dayjs';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { fetchUserDetail } from '../services/api';
 import type { UserDetail } from '../services/types';
 
 export function UserDetailPage() {
   const { userId = '' } = useParams();
   const [detail, setDetail] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorText, setErrorText] = useState('');
+  const navigate = useNavigate();
+  const { message } = App.useApp();
 
   useEffect(() => {
-    void fetchUserDetail(userId).then(setDetail);
-  }, [userId]);
+    let cancelled = false;
+
+    void (async () => {
+      setLoading(true);
+      setErrorText('');
+      try {
+        const nextDetail = await fetchUserDetail(userId);
+        if (!cancelled) {
+          setDetail(nextDetail);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDetail(null);
+          const nextError = error instanceof Error ? error.message : '用户详情加载失败';
+          setErrorText(nextError);
+          await message.error(nextError);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [message, userId]);
+
+  if (loading) {
+    return <Card loading />;
+  }
 
   if (!detail) {
-    return <Card loading />;
+    return (
+      <div className="page-shell">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">用户详情</h1>
+            <div className="page-subtitle">查看用户资料、状态和最近发布内容。</div>
+          </div>
+          <Button onClick={() => navigate('/users')}>返回用户列表</Button>
+        </div>
+        <Card>
+          <Empty description={errorText || '未找到用户详情'} />
+        </Card>
+      </div>
+    );
   }
 
   return (
