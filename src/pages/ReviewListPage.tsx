@@ -140,7 +140,7 @@ export function ReviewListPage() {
               try {
                 await approveReview(record.id);
                 await message.success('已审核通过');
-                void reload();
+                await reload();
               } catch (error) {
                 await message.error(error instanceof Error ? error.message : '审核通过失败');
               }

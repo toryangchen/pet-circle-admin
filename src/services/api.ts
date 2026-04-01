@@ -29,16 +29,15 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error?.response?.status === 401) {
-      clearAdminSession();
-    }
+export function handleApiError(error: unknown) {
+  if ((error as { response?: { status?: number } })?.response?.status === 401) {
+    clearAdminSession();
+  }
 
-    return Promise.reject(error);
-  },
-);
+  return Promise.reject(error);
+}
+
+client.interceptors.response.use((response) => response, handleApiError);
 
 async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
   const response = await promise;

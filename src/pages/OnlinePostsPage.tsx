@@ -93,7 +93,7 @@ export function OnlinePostsPage() {
               try {
                 await offlineReview(record.id, '内容过期或人工下架');
                 await message.success('已执行下架');
-                void reload();
+                await reload();
               } catch (error) {
                 await message.error(error instanceof Error ? error.message : '下架失败');
               }
