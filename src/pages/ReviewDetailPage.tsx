@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { App, Button, Card, Col, Descriptions, Image, Row, Space, Tag, Timeline } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
+import { RejectReasonModal } from '../components/RejectReasonModal';
 import { approveReview, fetchReviewDetail, rejectReview } from '../services/api';
 import type { ReviewDetail } from '../services/types';
 
@@ -28,8 +29,10 @@ export function ReviewDetailPage() {
   const { postId = '' } = useParams();
   const [detail, setDetail] = useState<ReviewDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { modal, message } = App.useApp();
+  const { message } = App.useApp();
 
   useEffect(() => {
     let cancelled = false;
@@ -78,17 +81,7 @@ export function ReviewDetailPage() {
           </Button>
           <Button
             danger
-            onClick={() => {
-              void modal.confirm({
-                title: '确认拒绝该内容？',
-                content: '将以“内容信息不足，建议补充后重新提交”作为拒绝原因。',
-                onOk: async () => {
-                  await rejectReview(detail.id, '内容信息不足，建议补充后重新提交');
-                  await message.success('已拒绝');
-                  navigate('/reviews');
-                },
-              });
-            }}
+            onClick={() => setRejectOpen(true)}
           >
             审核拒绝
           </Button>
@@ -121,7 +114,15 @@ export function ReviewDetailPage() {
         <Col span={8}>
           <Card title="发布者信息">
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="昵称">{detail.author?.nickname || '未命名用户'}</Descriptions.Item>
+              <Descriptions.Item label="昵称">
+                {detail.author?.id ? (
+                  <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`/users/${detail.author?.id}`)}>
+                    {detail.author?.nickname || '未命名用户'}
+                  </Button>
+                ) : (
+                  detail.author?.nickname || '未命名用户'
+                )}
+              </Descriptions.Item>
               <Descriptions.Item label="手机号">{detail.author?.phone || '未绑定'}</Descriptions.Item>
               <Descriptions.Item label="城市">{detail.city}</Descriptions.Item>
               <Descriptions.Item label="联系姓名">{detail.contact?.contactName || '未填写'}</Descriptions.Item>
@@ -145,6 +146,22 @@ export function ReviewDetailPage() {
           </Card>
         </Col>
       </Row>
+      <RejectReasonModal
+        open={rejectOpen}
+        loading={rejectSubmitting}
+        onCancel={() => setRejectOpen(false)}
+        onConfirm={async (reason) => {
+          setRejectSubmitting(true);
+          try {
+            await rejectReview(detail.id, reason);
+            await message.success('已拒绝');
+            setRejectOpen(false);
+            navigate('/reviews');
+          } finally {
+            setRejectSubmitting(false);
+          }
+        }}
+      />
     </div>
   );
 }

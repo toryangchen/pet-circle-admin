@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { App, Button, Card, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import { fetchOnlinePosts, offlineReview } from '../services/api';
 import type { ReviewListItem } from '../services/types';
 
@@ -9,6 +10,7 @@ export function OnlinePostsPage() {
   const [items, setItems] = useState<ReviewListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
+  const navigate = useNavigate();
 
   useEffect(() => {
     void reload();
@@ -50,16 +52,19 @@ export function OnlinePostsPage() {
     {
       title: '操作',
       render: (_, record) => (
-        <Button
-          danger
-          onClick={async () => {
-            await offlineReview(record.id, '内容过期或人工下架');
-            await message.success('已执行下架');
-            void reload();
-          }}
-        >
-          手动下架
-        </Button>
+        <Space>
+          <Button onClick={() => navigate(`/reviews/${record.id}`)}>查看详情</Button>
+          <Button
+            danger
+            onClick={async () => {
+              await offlineReview(record.id, '内容过期或人工下架');
+              await message.success('已执行下架');
+              void reload();
+            }}
+          >
+            手动下架
+          </Button>
+        </Space>
       ),
     },
   ];
