@@ -1,4 +1,4 @@
-import { App as AntdApp } from 'antd';
+import { App, App as AntdApp } from 'antd';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +8,11 @@ import { ReviewDetailPage } from './ReviewDetailPage';
 const mockNavigate = vi.fn();
 const mockFetchReviewDetail = vi.fn();
 const mockFetchOnlinePosts = vi.fn();
+const mockApproveReview = vi.fn();
+const mockRejectReview = vi.fn();
+const mockOfflineReview = vi.fn();
+const mockMessageSuccess = vi.fn();
+const mockMessageError = vi.fn();
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -20,9 +25,9 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../services/api', () => ({
   fetchReviewDetail: (...args: unknown[]) => mockFetchReviewDetail(...args),
-  approveReview: vi.fn(),
-  rejectReview: vi.fn(),
-  offlineReview: vi.fn(),
+  approveReview: (...args: unknown[]) => mockApproveReview(...args),
+  rejectReview: (...args: unknown[]) => mockRejectReview(...args),
+  offlineReview: (...args: unknown[]) => mockOfflineReview(...args),
   fetchOnlinePosts: (...args: unknown[]) => mockFetchOnlinePosts(...args),
 }));
 
@@ -39,6 +44,19 @@ describe('admin review flow pages', () => {
     mockNavigate.mockReset();
     mockFetchReviewDetail.mockReset();
     mockFetchOnlinePosts.mockReset();
+    mockApproveReview.mockReset();
+    mockRejectReview.mockReset();
+    mockOfflineReview.mockReset();
+    mockMessageSuccess.mockReset();
+    mockMessageError.mockReset();
+    mockMessageSuccess.mockResolvedValue(undefined);
+    mockMessageError.mockResolvedValue(undefined);
+    vi.spyOn(App, 'useApp').mockReturnValue({
+      message: {
+        success: mockMessageSuccess,
+        error: mockMessageError,
+      },
+    } as never);
   });
 
   it('shows review actions only for pending posts', async () => {
@@ -95,6 +113,119 @@ describe('admin review flow pages', () => {
     expect(await screen.findByRole('button', { name: '手动下架' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '审核通过' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '审核拒绝' })).not.toBeInTheDocument();
+  });
+
+  it('approves a pending post and returns to the review list', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'HOME_FEEDING',
+      status: 'PENDING',
+      title: '待审核服务',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockApproveReview.mockResolvedValue({
+      id: 'post-1',
+      status: 'APPROVED',
+    });
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '审核通过' }));
+
+    await waitFor(() => {
+      expect(mockApproveReview).toHaveBeenCalledWith('post-1');
+      expect(mockNavigate).toHaveBeenCalledWith('/reviews');
+    });
+  });
+
+  it('submits the reject reason and returns to the review list', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'BOARDING',
+      status: 'PENDING',
+      title: '待审核寄养',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockRejectReview.mockResolvedValue({
+      id: 'post-1',
+      status: 'REJECTED',
+    });
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '审核拒绝' }));
+
+    const reasonInput = await screen.findByLabelText('拒绝原因');
+    fireEvent.change(reasonInput, {
+      target: {
+        value: '资料不完整，请补充联系方式',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认拒绝' }));
+
+    await waitFor(() => {
+      expect(mockRejectReview).toHaveBeenCalledWith('post-1', '资料不完整，请补充联系方式');
+      expect(mockNavigate).toHaveBeenCalledWith('/reviews');
+    });
+  });
+
+  it('offlines an approved post and returns to the online list', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'SECOND_HAND',
+      status: 'APPROVED',
+      title: '已上线闲置',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: null,
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+    mockOfflineReview.mockResolvedValue({
+      id: 'post-1',
+      status: 'OFFLINE',
+    });
+
+    renderWithApp(<ReviewDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '手动下架' }));
+
+    await waitFor(() => {
+      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '内容过期或人工下架');
+      expect(mockNavigate).toHaveBeenCalledWith('/online');
+    });
   });
 
   it('passes selected filters to the online posts query', async () => {
