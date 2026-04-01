@@ -1,7 +1,7 @@
 import { App, App as AntdApp } from 'antd';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OnlinePostsPage } from './OnlinePostsPage';
 import { ReviewDetailPage } from './ReviewDetailPage';
 
@@ -57,6 +57,10 @@ describe('admin review flow pages', () => {
         error: mockMessageError,
       },
     } as never);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('shows review actions only for pending posts', async () => {

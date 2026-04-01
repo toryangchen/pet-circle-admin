@@ -145,7 +145,7 @@ export function ReviewDetailPage() {
       <Row gutter={16}>
         <Col span={16}>
           <Card loading={loading} title="内容详情">
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            <Space orientation="vertical" size={16} style={{ width: '100%' }}>
               <Space>
                 <Tag color={detail.type === 'SERVICE' ? 'green' : 'gold'}>{detail.type}</Tag>
                 {detail.serviceCategory ? <Tag>{detail.serviceCategory}</Tag> : null}
@@ -187,7 +187,7 @@ export function ReviewDetailPage() {
           <Card title="审核记录" style={{ marginTop: 16 }}>
             <Timeline
               items={(detail.reviewLogs.length ? detail.reviewLogs : [{ id: 'pending', action: 'PENDING', createdAt: detail.createdAt, reason: null }]).map((item) => ({
-                children: (
+                content: (
                   <div>
                     <div style={{ fontWeight: 600 }}>{item.action}</div>
                     <div style={{ color: '#6b7280', fontSize: 12 }}>
