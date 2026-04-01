@@ -25,3 +25,8 @@ Object.defineProperty(window, 'ResizeObserver', {
   writable: true,
   value: ResizeObserverMock,
 });
+
+const originalGetComputedStyle = window.getComputedStyle.bind(window);
+
+window.getComputedStyle = ((element: Element) =>
+  originalGetComputedStyle(element)) as typeof window.getComputedStyle;
