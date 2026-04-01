@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Empty, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Empty, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { fetchOnlinePosts, offlineReview } from '../services/api';
 import type { ReviewListItem } from '../services/types';
+
+const typeOptions = [
+  { label: '全部类型', value: '' },
+  { label: '宠物圈', value: 'PET_SOCIAL' },
+  { label: '服务', value: 'SERVICE' },
+];
+
+const serviceCategoryOptions = [
+  { label: '全部类目', value: '' },
+  { label: '领养', value: 'ADOPTION' },
+  { label: '寄养', value: 'BOARDING' },
+  { label: '上门喂养', value: 'HOME_FEEDING' },
+  { label: '闲置', value: 'SECOND_HAND' },
+];
 
 export function OnlinePostsPage() {
   const [items, setItems] = useState<ReviewListItem[]>([]);
@@ -12,6 +26,8 @@ export function OnlinePostsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [postType, setPostType] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('');
   const { message } = App.useApp();
   const navigate = useNavigate();
 
@@ -21,7 +37,12 @@ export function OnlinePostsPage() {
     void (async () => {
       setLoading(true);
       try {
-        const result = await fetchOnlinePosts({ page, pageSize });
+        const result = await fetchOnlinePosts({
+          page,
+          pageSize,
+          type: postType || undefined,
+          serviceCategory: serviceCategory || undefined,
+        });
         if (!cancelled) {
           setItems(result.items);
           setTotal(result.total);
@@ -42,12 +63,17 @@ export function OnlinePostsPage() {
     return () => {
       cancelled = true;
     };
-  }, [message, page, pageSize]);
+  }, [message, page, pageSize, postType, serviceCategory]);
 
   async function reload() {
     setLoading(true);
     try {
-      const result = await fetchOnlinePosts({ page, pageSize });
+      const result = await fetchOnlinePosts({
+        page,
+        pageSize,
+        type: postType || undefined,
+        serviceCategory: serviceCategory || undefined,
+      });
       setItems(result.items);
       setTotal(result.total);
     } catch (error) {
@@ -113,6 +139,27 @@ export function OnlinePostsPage() {
           <h1 className="page-title">已上线内容</h1>
           <div className="page-subtitle">查看当前公开展示的内容，并支持运营手动下架。</div>
         </div>
+        <Space>
+          <Select
+            value={postType}
+            onChange={(value) => {
+              setPostType(value);
+              setPage(1);
+            }}
+            options={typeOptions}
+            style={{ width: 160 }}
+          />
+          <Select
+            value={serviceCategory}
+            onChange={(value) => {
+              setServiceCategory(value);
+              setPage(1);
+            }}
+            options={serviceCategoryOptions}
+            style={{ width: 180 }}
+          />
+          <Button onClick={() => void reload()}>刷新</Button>
+        </Space>
       </div>
       <Card>
         <Table
