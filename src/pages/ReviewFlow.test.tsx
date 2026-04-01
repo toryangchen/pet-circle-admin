@@ -302,6 +302,8 @@ describe('admin review flow pages', () => {
       expect(mockRejectReview).toHaveBeenCalledWith('post-1', '资料不完整，请补充联系方式');
       expect(mockMessageError).toHaveBeenCalledWith('拒绝失败');
     });
+    expect(screen.getByText('填写拒绝原因')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '确认拒绝' })).not.toBeDisabled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -335,6 +337,7 @@ describe('admin review flow pages', () => {
       expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '内容过期或人工下架');
       expect(mockMessageError).toHaveBeenCalledWith('下架失败');
     });
+    expect(screen.getByRole('button', { name: /手动下架/ })).not.toHaveClass('ant-btn-loading');
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
