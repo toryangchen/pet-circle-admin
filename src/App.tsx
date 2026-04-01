@@ -46,7 +46,7 @@ function ProtectedLayout() {
     [],
   );
 
-  if (!session) {
+  if (!session?.token) {
     return <Navigate to="/login" replace />;
   }
 
@@ -124,6 +124,7 @@ export default function App() {
           <Route path="/reviews" element={<ReviewListPage />} />
           <Route path="/reviews/:postId" element={<ReviewDetailPage />} />
           <Route path="/online" element={<OnlinePostsPage />} />
+          <Route path="/online/:postId" element={<ReviewDetailPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/:userId" element={<UserDetailPage />} />
         </Route>

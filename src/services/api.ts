@@ -7,15 +7,7 @@ import type {
   UserDetail,
   UserListItem,
 } from './types';
-import {
-  mockAdminSession,
-  mockOnlinePosts,
-  mockPendingReviews,
-  mockReviewDetail,
-  mockUserDetail,
-  mockUsers,
-} from './mock';
-import { getStoredAdminSession, saveAdminSession } from './session';
+import { getStoredAdminSession, clearAdminSession, saveAdminSession } from './session';
 
 type ApiEnvelope<T> = {
   code: number;
@@ -30,20 +22,23 @@ const client = axios.create({
 
 client.interceptors.request.use((config) => {
   const session = getStoredAdminSession();
-  if (session?.token && !session.isMock) {
+  if (session?.token) {
     config.headers.Authorization = `Bearer ${session.token}`;
   }
 
   return config;
 });
 
-async function withFallback<T>(loader: () => Promise<T>, fallback: T | (() => T)) {
-  try {
-    return await loader();
-  } catch {
-    return typeof fallback === 'function' ? (fallback as () => T)() : fallback;
-  }
-}
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      clearAdminSession();
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
   const response = await promise;
@@ -55,24 +50,16 @@ async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
 }
 
 export async function adminLogin(username: string, password: string): Promise<AdminSession> {
-  return withFallback(
-    async () => {
-      const session = await unwrap<{ token: string; user: AdminSession['user'] }>(
-        client.post('/admin/auth/login', { username, password }),
-      );
-
-      const nextSession: AdminSession = {
-        token: session.token,
-        user: session.user,
-      };
-      saveAdminSession(nextSession);
-      return nextSession;
-    },
-    () => {
-      saveAdminSession(mockAdminSession);
-      return mockAdminSession;
-    },
+  const session = await unwrap<{ token: string; user: AdminSession['user'] }>(
+    client.post('/admin/auth/login', { username, password }),
   );
+
+  const nextSession: AdminSession = {
+    token: session.token,
+    user: session.user,
+  };
+  saveAdminSession(nextSession);
+  return nextSession;
 }
 
 export async function fetchPendingReviews(params?: {
@@ -81,14 +68,10 @@ export async function fetchPendingReviews(params?: {
   type?: string;
   serviceCategory?: string;
 }) {
-  return withFallback(
-    () =>
-      unwrap<PagedResult<ReviewListItem>>(
-        client.get('/admin/reviews/pending', {
-          params,
-        }),
-      ),
-    mockPendingReviews,
+  return unwrap<PagedResult<ReviewListItem>>(
+    client.get('/admin/reviews/pending', {
+      params,
+    }),
   );
 }
 
@@ -98,75 +81,37 @@ export async function fetchOnlinePosts(params?: {
   type?: string;
   serviceCategory?: string;
 }) {
-  return withFallback(
-    () =>
-      unwrap<PagedResult<ReviewListItem>>(
-        client.get('/admin/posts/online', {
-          params,
-        }),
-      ),
-    mockOnlinePosts,
+  return unwrap<PagedResult<ReviewListItem>>(
+    client.get('/admin/posts/online', {
+      params,
+    }),
   );
 }
 
 export async function fetchReviewDetail(postId: string) {
-  return withFallback(
-    () => unwrap<ReviewDetail>(client.get(`/admin/reviews/${postId}`)),
-    () => ({
-      ...mockReviewDetail,
-      id: postId,
-    }),
-  );
+  return unwrap<ReviewDetail>(client.get(`/admin/reviews/${postId}`));
 }
 
 export async function approveReview(postId: string) {
-  return withFallback(
-    () => unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/approve`, {})),
-    {
-      id: postId,
-      status: 'APPROVED',
-    },
-  );
+  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/approve`, {}));
 }
 
 export async function rejectReview(postId: string, reason: string) {
-  return withFallback(
-    () => unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/reject`, { reason })),
-    {
-      id: postId,
-      status: 'REJECTED',
-    },
-  );
+  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/reject`, { reason }));
 }
 
 export async function offlineReview(postId: string, reason: string) {
-  return withFallback(
-    () => unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/offline`, { reason })),
-    {
-      id: postId,
-      status: 'OFFLINE',
-    },
-  );
+  return unwrap<{ id: string; status: string }>(client.post(`/admin/reviews/${postId}/offline`, { reason }));
 }
 
 export async function fetchUsers(params?: { page?: number; pageSize?: number; keyword?: string }) {
-  return withFallback(
-    () =>
-      unwrap<PagedResult<UserListItem>>(
-        client.get('/admin/users', {
-          params,
-        }),
-      ),
-    mockUsers,
+  return unwrap<PagedResult<UserListItem>>(
+    client.get('/admin/users', {
+      params,
+    }),
   );
 }
 
 export async function fetchUserDetail(userId: string) {
-  return withFallback(
-    () => unwrap<UserDetail>(client.get(`/admin/users/${userId}`)),
-    () => ({
-      ...mockUserDetail,
-      id: userId,
-    }),
-  );
+  return unwrap<UserDetail>(client.get(`/admin/users/${userId}`));
 }

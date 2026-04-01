@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Empty, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,9 @@ const serviceCategoryOptions = [
 export function ReviewListPage() {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ReviewListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [postType, setPostType] = useState('');
   const [serviceCategory, setServiceCategory] = useState('');
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
@@ -38,14 +41,21 @@ export function ReviewListPage() {
       setLoading(true);
       try {
         const result = await fetchPendingReviews({
-          page: 1,
-          pageSize: 20,
+          page,
+          pageSize,
           type: postType || undefined,
           serviceCategory: serviceCategory || undefined,
         });
 
         if (!cancelled) {
           setItems(result.items);
+          setTotal(result.total);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          void message.error(error instanceof Error ? error.message : '待审核列表加载失败');
+          setItems([]);
+          setTotal(0);
         }
       } finally {
         if (!cancelled) {
@@ -57,18 +67,23 @@ export function ReviewListPage() {
     return () => {
       cancelled = true;
     };
-  }, [postType, serviceCategory]);
+  }, [message, page, pageSize, postType, serviceCategory]);
 
   async function reload() {
     setLoading(true);
     try {
       const result = await fetchPendingReviews({
-        page: 1,
-        pageSize: 20,
+        page,
+        pageSize,
         type: postType || undefined,
         serviceCategory: serviceCategory || undefined,
       });
       setItems(result.items);
+      setTotal(result.total);
+    } catch (error) {
+      await message.error(error instanceof Error ? error.message : '待审核列表加载失败');
+      setItems([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -122,9 +137,13 @@ export function ReviewListPage() {
           <Button
             type="primary"
             onClick={async () => {
-              await approveReview(record.id);
-              await message.success('已审核通过');
-              void reload();
+              try {
+                await approveReview(record.id);
+                await message.success('已审核通过');
+                void reload();
+              } catch (error) {
+                await message.error(error instanceof Error ? error.message : '审核通过失败');
+              }
             }}
           >
             通过
@@ -148,10 +167,21 @@ export function ReviewListPage() {
           <div className="page-subtitle">优先处理新发布内容，审核结果会直接影响前台展示。</div>
         </div>
         <Space>
-          <Select value={postType} onChange={setPostType} options={typeOptions} style={{ width: 160 }} />
+          <Select
+            value={postType}
+            onChange={(value) => {
+              setPostType(value);
+              setPage(1);
+            }}
+            options={typeOptions}
+            style={{ width: 160 }}
+          />
           <Select
             value={serviceCategory}
-            onChange={setServiceCategory}
+            onChange={(value) => {
+              setServiceCategory(value);
+              setPage(1);
+            }}
             options={serviceCategoryOptions}
             style={{ width: 180 }}
           />
@@ -159,7 +189,24 @@ export function ReviewListPage() {
         </Space>
       </div>
       <Card>
-        <Table rowKey="id" loading={loading} columns={columns} dataSource={items} pagination={false} />
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={items}
+          locale={{ emptyText: <Empty description="暂无待审核内容" /> }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (count) => `共 ${count} 条`,
+            onChange: (nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            },
+          }}
+        />
       </Card>
       <RejectReasonModal
         open={!!rejectingPostId}
@@ -176,6 +223,8 @@ export function ReviewListPage() {
             await message.success('已拒绝');
             setRejectingPostId(null);
             await reload();
+          } catch (error) {
+            await message.error(error instanceof Error ? error.message : '拒绝失败');
           } finally {
             setRejectSubmitting(false);
           }

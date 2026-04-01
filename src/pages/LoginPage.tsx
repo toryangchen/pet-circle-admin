@@ -39,6 +39,10 @@ export function LoginPage() {
                 await adminLogin(values.username, values.password);
                 await messageApi.success('登录成功');
                 navigate('/reviews', { replace: true });
+              } catch (error) {
+                await messageApi.error(
+                  error instanceof Error ? error.message : '登录失败，请检查账号密码或服务连接',
+                );
               } finally {
                 setSubmitting(false);
               }
