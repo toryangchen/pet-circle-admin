@@ -1,73 +1,84 @@
-# React + TypeScript + Vite
+# Pet Circle Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+`pet-circle-admin` 是「宠友圈」运营管理后台，服务于内容审核、已上线内容管理和用户信息查看。
 
-Currently, two official plugins are available:
+当前技术栈：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + TypeScript
+- Vite
+- Ant Design
+- React Router
+- Axios
+- Vitest + Testing Library
 
-## React Compiler
+## 已实现页面
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `/login`：管理员登录
+- `/reviews`：待审核内容列表
+- `/reviews/:postId`：审核详情
+- `/online`：已上线内容列表
+- `/online/:postId`：已上线内容详情/下架入口
+- `/users`：用户列表
+- `/users/:userId`：用户详情
 
-## Expanding the ESLint configuration
+## 已实现能力
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 管理员登录态本地存储
+- 请求自动携带 `Authorization: Bearer <token>`
+- 401 后自动清理登录态
+- 受保护后台布局
+- 待审核列表分页与筛选
+- 内容详情查看
+- 审核通过
+- 审核拒绝并填写原因
+- 已上线内容下架
+- 用户列表与用户详情
+- 页面级测试覆盖登录、审核流程等关键路径
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 本地启动
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. 启动后端服务
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd ../pet-circle-server
+npm run start:dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. 启动后台前端
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
+
+默认后端 API 地址写在 `src/services/api.ts`：
+
+```text
+http://127.0.0.1:3000/api
+```
+
+如需连接其他环境，先调整该文件中的 `baseURL`。
+
+## 常用命令
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run test
+npm run preview
+```
+
+## 接口依赖
+
+管理后台依赖 `pet-circle-server` 的 admin API：
+
+- `POST /api/admin/auth/login`
+- `POST /api/admin/reviews/pending`
+- `POST /api/admin/reviews/:postId`
+- `POST /api/admin/reviews/:postId/approve`
+- `POST /api/admin/reviews/:postId/reject`
+- `POST /api/admin/reviews/:postId/offline`
+- `POST /api/admin/posts/online`
+- `POST /api/admin/users`
+- `POST /api/admin/users/:id`
