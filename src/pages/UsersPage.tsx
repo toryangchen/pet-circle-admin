@@ -3,6 +3,7 @@ import { App, Button, Card, Empty, Input, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircleOutlined, SearchOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { fetchUsers } from '../services/api';
 import type { UserListItem } from '../services/types';
 
@@ -93,6 +94,39 @@ export function UsersPage() {
           <h1 className="page-title">用户管理</h1>
           <div className="page-subtitle">查看用户基础资料、注册时间与发布数量，辅助审核判断。</div>
         </div>
+      </div>
+      <div className="metric-strip">
+        <div className="metric-tile">
+          <div className="metric-icon"><TeamOutlined /></div>
+          <div>
+            <div className="metric-label">用户总数</div>
+            <div className="metric-value">{total}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><CheckCircleOutlined /></div>
+          <div>
+            <div className="metric-label">当前页用户</div>
+            <div className="metric-value">{items.length}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><SearchOutlined /></div>
+          <div>
+            <div className="metric-label">搜索条件</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>{searchKeyword || '无'}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><UserOutlined /></div>
+          <div>
+            <div className="metric-label">每页显示</div>
+            <div className="metric-value">{pageSize}</div>
+          </div>
+        </div>
+      </div>
+      <div className="filter-bar">
+        <div style={{ color: '#69746d', fontSize: 13 }}>按昵称或手机号查找</div>
         <Space>
           <Input.Search
             allowClear
@@ -108,7 +142,7 @@ export function UsersPage() {
           />
         </Space>
       </div>
-      <Card>
+      <Card className="work-panel">
         <Table
           rowKey="id"
           loading={loading}

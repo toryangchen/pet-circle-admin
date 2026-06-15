@@ -3,6 +3,7 @@ import { App, Button, Card, Empty, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { CheckSquareOutlined, ClockCircleOutlined, FileSearchOutlined, FilterOutlined } from '@ant-design/icons';
 import { RejectReasonModal } from '../components/RejectReasonModal';
 import { approveReview, fetchPendingReviews, rejectReview } from '../services/api';
 import type { ReviewListItem } from '../services/types';
@@ -166,6 +167,40 @@ export function ReviewListPage() {
           <h1 className="page-title">待审核列表</h1>
           <div className="page-subtitle">优先处理新发布内容，审核结果会直接影响前台展示。</div>
         </div>
+        <Button onClick={() => void reload()}>刷新</Button>
+      </div>
+      <div className="metric-strip">
+        <div className="metric-tile">
+          <div className="metric-icon"><ClockCircleOutlined /></div>
+          <div>
+            <div className="metric-label">待处理内容</div>
+            <div className="metric-value">{total}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><FilterOutlined /></div>
+          <div>
+            <div className="metric-label">当前类型</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>{postType || '全部'}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><FileSearchOutlined /></div>
+          <div>
+            <div className="metric-label">服务类目</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>{serviceCategory || '全部'}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><CheckSquareOutlined /></div>
+          <div>
+            <div className="metric-label">每页处理量</div>
+            <div className="metric-value">{pageSize}</div>
+          </div>
+        </div>
+      </div>
+      <div className="filter-bar">
+        <div style={{ color: '#69746d', fontSize: 13 }}>审核队列筛选</div>
         <Space>
           <Select
             value={postType}
@@ -185,10 +220,9 @@ export function ReviewListPage() {
             options={serviceCategoryOptions}
             style={{ width: 180 }}
           />
-          <Button onClick={() => void reload()}>刷新</Button>
         </Space>
       </div>
-      <Card>
+      <Card className="work-panel">
         <Table
           rowKey="id"
           loading={loading}

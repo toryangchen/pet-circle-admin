@@ -3,7 +3,19 @@ import { App, Button, Card, Descriptions, Empty, List, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchUserDetail } from '../services/api';
-import type { UserDetail } from '../services/types';
+import type { PostStatus, UserDetail } from '../services/types';
+
+function getAdminPostRoute(postId: string, status: PostStatus) {
+  if (status === 'PENDING') {
+    return `/reviews/${postId}`;
+  }
+
+  if (status === 'APPROVED') {
+    return `/online/${postId}`;
+  }
+
+  return null;
+}
 
 export function UserDetailPage() {
   const { userId = '' } = useParams();
@@ -57,7 +69,7 @@ export function UserDetailPage() {
           </div>
           <Button onClick={() => navigate('/users')}>返回用户列表</Button>
         </div>
-        <Card>
+        <Card className="work-panel">
           <Empty description={errorText || '未找到用户详情'} />
         </Card>
       </div>
@@ -72,7 +84,7 @@ export function UserDetailPage() {
           <div className="page-subtitle">查看用户资料、状态和最近发布内容。</div>
         </div>
       </div>
-      <Card title="基础信息">
+      <Card className="work-panel" title="基础信息">
         <Descriptions column={2}>
           <Descriptions.Item label="昵称">{detail.nickname || '未命名用户'}</Descriptions.Item>
           <Descriptions.Item label="手机号">{detail.phone || '未绑定'}</Descriptions.Item>
@@ -92,16 +104,29 @@ export function UserDetailPage() {
           <Descriptions.Item label="发布数量">{detail.postCount}</Descriptions.Item>
         </Descriptions>
       </Card>
-      <Card title="最近发布" style={{ marginTop: 16 }}>
+      <Card className="work-panel" title="最近发布" style={{ marginTop: 16 }}>
         <List
           dataSource={detail.recentPosts}
           renderItem={(item) => (
             <List.Item>
               <List.Item.Meta
                 title={
-                  <span>
-                    {item.title} <Tag>{item.type}</Tag> <Tag>{item.status}</Tag>
-                  </span>
+                  (() => {
+                    const route = getAdminPostRoute(item.id, item.status);
+                    const title = route ? (
+                      <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => navigate(route)}>
+                        {item.title}
+                      </Button>
+                    ) : (
+                      <span>{item.title}</span>
+                    );
+
+                    return (
+                      <span>
+                        {title} <Tag>{item.type}</Tag> <Tag>{item.status}</Tag>
+                      </span>
+                    );
+                  })()
                 }
                 description={dayjs(item.createdAt).format('YYYY-MM-DD HH:mm')}
               />

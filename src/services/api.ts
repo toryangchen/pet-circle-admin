@@ -18,7 +18,7 @@ type ApiEnvelope<T> = {
 };
 
 const client = axios.create({
-  baseURL: 'http://127.0.0.1:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3000/api',
   timeout: 4000,
 });
 
@@ -41,13 +41,34 @@ export function handleApiError(error: unknown) {
 
 client.interceptors.response.use((response) => response, handleApiError);
 
-async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
-  const response = await promise;
-  if (response.data.code !== 0) {
-    throw new Error(response.data.message);
+export function toApiError(error: unknown): Error {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    if (status) {
+      return new Error(`请求失败 (${status})`);
+    }
+
+    return new Error('网络连接失败，请检查服务是否可用');
   }
 
-  return response.data.data;
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error('请求失败');
+}
+
+async function unwrap<T>(promise: Promise<{ data: ApiEnvelope<T> }>) {
+  try {
+    const response = await promise;
+    if (response.data?.code !== 0) {
+      throw new Error(response.data?.message ?? '请求失败');
+    }
+
+    return response.data.data;
+  } catch (error) {
+    throw toApiError(error);
+  }
 }
 
 export async function adminLogin(username: string, password: string): Promise<AdminSession> {
@@ -70,7 +91,7 @@ export async function fetchPendingReviews(params?: {
   serviceCategory?: string;
 }) {
   return unwrap<PagedResult<ReviewListItem>>(
-    client.get('/admin/reviews/pending', {
+    client.post('/admin/reviews/pending', {}, {
       params,
     }),
   );
@@ -83,14 +104,14 @@ export async function fetchOnlinePosts(params?: {
   serviceCategory?: string;
 }) {
   return unwrap<PagedResult<ReviewListItem>>(
-    client.get('/admin/posts/online', {
+    client.post('/admin/posts/online', {}, {
       params,
     }),
   );
 }
 
 export async function fetchReviewDetail(postId: string) {
-  return unwrap<ReviewDetail>(client.get(`/admin/reviews/${postId}`));
+  return unwrap<ReviewDetail>(client.post(`/admin/reviews/${postId}`, {}));
 }
 
 export async function approveReview(postId: string) {
@@ -107,12 +128,12 @@ export async function offlineReview(postId: string, reason: string) {
 
 export async function fetchUsers(params?: { page?: number; pageSize?: number; keyword?: string }) {
   return unwrap<PagedResult<UserListItem>>(
-    client.get('/admin/users', {
+    client.post('/admin/users', {}, {
       params,
     }),
   );
 }
 
 export async function fetchUserDetail(userId: string) {
-  return unwrap<UserDetail>(client.get(`/admin/users/${userId}`));
+  return unwrap<UserDetail>(client.post(`/admin/users/${userId}`, {}));
 }

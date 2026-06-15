@@ -1,9 +1,11 @@
-import { App as AntdApp, Layout, Menu, theme } from 'antd';
+import { App as AntdApp, ConfigProvider, Layout, Menu } from 'antd';
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   CheckSquareOutlined,
   FileSearchOutlined,
   LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -61,9 +63,8 @@ function ProtectedLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [session, setSession] = useState(() => getStoredAdminSession());
-  const {
-    token: { colorBgContainer, colorBorderSecondary },
-  } = theme.useToken();
+  const [sideCollapsed, setSideCollapsed] = useState(false);
+  const toggleLabel = sideCollapsed ? '展开菜单' : '收起菜单';
 
   const menuItems = useMemo(
     () => [
@@ -105,62 +106,63 @@ function ProtectedLayout() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="admin-shell">
       <Sider
-        width={248}
-        style={{
-          background: '#10243f',
-          paddingTop: 16,
-        }}
+        width={236}
+        collapsedWidth={76}
+        collapsed={sideCollapsed}
+        trigger={null}
+        className="admin-sider"
       >
-        <div
-          style={{
-            color: '#f5f7fb',
-            fontSize: 20,
-            fontWeight: 700,
-            padding: '8px 20px 20px',
-          }}
-        >
-          宠友圈后台
+        <div className={`admin-brand ${sideCollapsed ? 'admin-brand--collapsed' : ''}`}>
+          <div className="admin-brand-mark">宠</div>
+          {!sideCollapsed ? (
+            <div>
+              <div className="admin-brand-title">宠友圈后台</div>
+              <div className="admin-brand-caption">内容审核与运营管理</div>
+            </div>
+          ) : null}
         </div>
         <Menu
           theme="dark"
           mode="inline"
+          inlineCollapsed={sideCollapsed}
           selectedKeys={[location.pathname.startsWith('/users') ? '/users' : location.pathname.startsWith('/online') ? '/online' : '/reviews']}
           items={menuItems}
           style={{ background: 'transparent', borderInlineEnd: 'none' }}
         />
+        <button
+          type="button"
+          className={`admin-sider-toggle ${sideCollapsed ? 'admin-sider-toggle--collapsed' : ''}`}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          onClick={() => setSideCollapsed((value) => !value)}
+        >
+          {sideCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        </button>
       </Sider>
       <Layout>
-        <Header
-          style={{
-            background: colorBgContainer,
-            borderBottom: `1px solid ${colorBorderSecondary}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingInline: 24,
-          }}
-        >
+        <Header className="admin-header">
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>审核工作台</div>
-            <div style={{ color: '#6b7280', fontSize: 13 }}>优先处理待审核、已上线与用户信息查看</div>
+            <div className="admin-header-title">审核工作台</div>
+            <div className="admin-header-subtitle">优先处理待审核内容，保持线上信息可控</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="admin-user-chip">
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontWeight: 600 }}>{session.user.username}</div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>{session.user.role}</div>
+              <div style={{ color: '#69746d', fontSize: 12 }}>{session.user.role}</div>
             </div>
+            <div className="admin-user-avatar">{session.user.username.slice(0, 2).toUpperCase()}</div>
             <LogoutOutlined
               onClick={() => {
                 clearAdminSession();
                 navigate('/login', { replace: true });
               }}
-              style={{ cursor: 'pointer', color: '#6b7280', fontSize: 18 }}
+              className="admin-logout"
             />
           </div>
         </Header>
-        <Content style={{ padding: 24, background: '#f4f7fb' }}>
+        <Content className="admin-content">
           <Outlet />
         </Content>
       </Layout>
@@ -170,21 +172,47 @@ function ProtectedLayout() {
 
 export default function App() {
   return (
-    <AntdApp>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<Navigate to="/reviews" replace />} />
-            <Route path="/reviews" element={<ReviewListPage />} />
-            <Route path="/reviews/:postId" element={<ReviewDetailPage />} />
-            <Route path="/online" element={<OnlinePostsPage />} />
-            <Route path="/online/:postId" element={<ReviewDetailPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/users/:userId" element={<UserDetailPage />} />
-          </Route>
-        </Routes>
-      </Suspense>
-    </AntdApp>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#087443',
+          colorInfo: '#2468b2',
+          colorSuccess: '#087443',
+          colorWarning: '#c96f05',
+          colorError: '#c83d33',
+          colorText: '#17211c',
+          colorTextSecondary: '#69746d',
+          colorBorder: '#dce3dc',
+          borderRadius: 6,
+          wireframe: false,
+        },
+        components: {
+          Layout: {
+            headerBg: '#ffffff',
+          },
+          Table: {
+            headerBg: '#f6f8f5',
+            rowHoverBg: '#f8fbf7',
+          },
+        },
+      }}
+    >
+      <AntdApp>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedLayout />}>
+              <Route path="/" element={<Navigate to="/reviews" replace />} />
+              <Route path="/reviews" element={<ReviewListPage />} />
+              <Route path="/reviews/:postId" element={<ReviewDetailPage />} />
+              <Route path="/online" element={<OnlinePostsPage />} />
+              <Route path="/online/:postId" element={<ReviewDetailPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/users/:userId" element={<UserDetailPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </AntdApp>
+    </ConfigProvider>
   );
 }

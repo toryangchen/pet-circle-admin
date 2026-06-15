@@ -51,13 +51,11 @@ npm install
 npm run dev
 ```
 
-默认后端 API 地址写在 `src/services/api.ts`：
+默认后端 API 地址为 `http://127.0.0.1:3000/api`。如需连接其他环境，设置环境变量：
 
-```text
-http://127.0.0.1:3000/api
+```bash
+VITE_API_BASE_URL=https://your-api-host/api npm run dev
 ```
-
-如需连接其他环境，先调整该文件中的 `baseURL`。
 
 ## 常用命令
 

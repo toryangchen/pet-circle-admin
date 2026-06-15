@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { Button, Card, Form, Input, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '../services/api';
 
@@ -11,25 +11,27 @@ export function LoginPage() {
   return (
     <>
       {contextHolder}
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          background:
-            'radial-gradient(circle at top left, rgba(47,142,12,0.16), transparent 30%), linear-gradient(180deg, #f4f7fb 0%, #eef3f8 100%)',
-        }}
-      >
-        <Card
-          style={{ width: 460, borderRadius: 24, boxShadow: '0 20px 60px rgba(16,36,63,0.08)' }}
-        >
-          <Typography.Title level={2} style={{ marginBottom: 8 }}>
-            宠友圈后台登录
-          </Typography.Title>
-          <Typography.Paragraph style={{ color: '#6b7280', marginBottom: 28 }}>
-            管理员登录后可处理待审核内容、查看上线内容和用户信息。
-          </Typography.Paragraph>
-
+      <div className="login-page">
+        <section className="login-hero">
+          <div className="admin-brand">
+            <div className="admin-brand-mark">宠</div>
+            <div>
+              <div className="admin-brand-title">宠友圈后台</div>
+              <div className="admin-brand-caption">Pet Circle Operations</div>
+            </div>
+          </div>
+          <div>
+            <div className="login-hero-title">把每一条上线内容，控制在运营可见范围内。</div>
+            <div className="login-hero-copy">
+              审核发布内容、处理下架原因、查看用户发布记录。后台只保留必要操作，方便运营快速判断。
+            </div>
+          </div>
+          <div style={{ color: 'rgba(247,251,248,0.48)', fontSize: 12 }}>Xi'an MVP · Admin Console</div>
+        </section>
+        <div className="login-card-wrap">
+          <Card className="login-card">
+          <h1 className="login-title">登录审核工作台</h1>
+          <div className="login-subtitle">默认本地管理员已填入，可直接进入后台检查审核流。</div>
           <Form
             layout="vertical"
             initialValues={{ username: 'operator', password: 'correct-password' }}
@@ -55,10 +57,11 @@ export function LoginPage() {
               <Input.Password size="large" placeholder="请输入密码" />
             </Form.Item>
             <Button type="primary" htmlType="submit" size="large" block loading={submitting}>
-              登录进入审核工作台
+              进入审核工作台
             </Button>
           </Form>
         </Card>
+        </div>
       </div>
     </>
   );

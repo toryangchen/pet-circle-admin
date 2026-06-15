@@ -3,6 +3,8 @@ import { App, Button, Card, Empty, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { CheckCircleOutlined, FileSearchOutlined, FilterOutlined, StopOutlined } from '@ant-design/icons';
+import { RejectReasonModal } from '../components/RejectReasonModal';
 import { fetchOnlinePosts, offlineReview } from '../services/api';
 import type { ReviewListItem } from '../services/types';
 
@@ -28,6 +30,8 @@ export function OnlinePostsPage() {
   const [pageSize, setPageSize] = useState(20);
   const [postType, setPostType] = useState('');
   const [serviceCategory, setServiceCategory] = useState('');
+  const [offliningPostId, setOffliningPostId] = useState<string | null>(null);
+  const [offlineSubmitting, setOfflineSubmitting] = useState(false);
   const { message } = App.useApp();
   const navigate = useNavigate();
 
@@ -113,18 +117,7 @@ export function OnlinePostsPage() {
       render: (_, record) => (
         <Space>
           <Button onClick={() => navigate(`/online/${record.id}`)}>查看详情</Button>
-          <Button
-            danger
-            onClick={async () => {
-              try {
-                await offlineReview(record.id, '内容过期或人工下架');
-                await message.success('已执行下架');
-                await reload();
-              } catch (error) {
-                await message.error(error instanceof Error ? error.message : '下架失败');
-              }
-            }}
-          >
+          <Button danger onClick={() => setOffliningPostId(record.id)}>
             手动下架
           </Button>
         </Space>
@@ -139,6 +132,40 @@ export function OnlinePostsPage() {
           <h1 className="page-title">已上线内容</h1>
           <div className="page-subtitle">查看当前公开展示的内容，并支持运营手动下架。</div>
         </div>
+        <Button onClick={() => void reload()}>刷新</Button>
+      </div>
+      <div className="metric-strip">
+        <div className="metric-tile">
+          <div className="metric-icon"><CheckCircleOutlined /></div>
+          <div>
+            <div className="metric-label">线上内容</div>
+            <div className="metric-value">{total}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><FilterOutlined /></div>
+          <div>
+            <div className="metric-label">当前类型</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>{postType || '全部'}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><FileSearchOutlined /></div>
+          <div>
+            <div className="metric-label">服务类目</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>{serviceCategory || '全部'}</div>
+          </div>
+        </div>
+        <div className="metric-tile">
+          <div className="metric-icon"><StopOutlined /></div>
+          <div>
+            <div className="metric-label">下架入口</div>
+            <div className="metric-value" style={{ fontSize: 18 }}>需原因</div>
+          </div>
+        </div>
+      </div>
+      <div className="filter-bar">
+        <div style={{ color: '#69746d', fontSize: 13 }}>线上内容筛选</div>
         <Space>
           <Select
             value={postType}
@@ -158,10 +185,9 @@ export function OnlinePostsPage() {
             options={serviceCategoryOptions}
             style={{ width: 180 }}
           />
-          <Button onClick={() => void reload()}>刷新</Button>
         </Space>
       </div>
-      <Card>
+      <Card className="work-panel">
         <Table
           rowKey="id"
           loading={loading}
@@ -181,6 +207,33 @@ export function OnlinePostsPage() {
           }}
         />
       </Card>
+      <RejectReasonModal
+        open={!!offliningPostId}
+        loading={offlineSubmitting}
+        title="填写下架原因"
+        fieldLabel="下架原因"
+        okText="确认下架"
+        defaultReason="内容过期或不适合继续展示"
+        placeholder="例如：服务信息已过期、联系方式无效、内容不适合继续展示"
+        onCancel={() => setOffliningPostId(null)}
+        onConfirm={async (reason) => {
+          if (!offliningPostId) {
+            return;
+          }
+
+          setOfflineSubmitting(true);
+          try {
+            await offlineReview(offliningPostId, reason);
+            await message.success('已执行下架');
+            setOffliningPostId(null);
+            await reload();
+          } catch (error) {
+            await message.error(error instanceof Error ? error.message : '下架失败');
+          } finally {
+            setOfflineSubmitting(false);
+          }
+        }}
+      />
     </div>
   );
 }

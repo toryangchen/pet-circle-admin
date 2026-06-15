@@ -6,6 +6,43 @@ import { RejectReasonModal } from '../components/RejectReasonModal';
 import { approveReview, fetchReviewDetail, offlineReview, rejectReview } from '../services/api';
 import type { ReviewDetail } from '../services/types';
 
+const structuredFieldLabels: Record<string, string> = {
+  petType: '宠物类型',
+  age: '年龄',
+  gender: '性别',
+  neuteredStatus: '是否绝育',
+  adoptionRequirements: '领养要求',
+  itemType: '商品类型',
+  itemCondition: '成色',
+  serviceArea: '服务区域',
+  availableTime: '可服务时间',
+  boardingEnvironment: '寄养环境',
+  acceptedPetTypes: '可接收宠物类型',
+  price: '价格',
+};
+
+const hiddenStructuredFields = new Set(['id', 'postId', 'createdAt', 'updatedAt']);
+
+function formatStructuredValue(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return '未填写';
+  }
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join(' / ') : '未填写';
+  }
+
+  if (value instanceof Date) {
+    return dayjs(value).format('YYYY-MM-DD HH:mm');
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+}
+
 function renderStructuredFieldBlock(detail: ReviewDetail) {
   const data =
     detail.homeFeedingDetail ?? detail.boardingDetail ?? detail.adoptionDetail ?? detail.secondHandDetail;
@@ -16,11 +53,13 @@ function renderStructuredFieldBlock(detail: ReviewDetail) {
 
   return (
     <Descriptions column={1} size="small">
-      {Object.entries(data).map(([key, value]) => (
-        <Descriptions.Item key={key} label={key}>
-          {Array.isArray(value) ? value.join(' / ') : String(value)}
-        </Descriptions.Item>
-      ))}
+      {Object.entries(data)
+        .filter(([key]) => !hiddenStructuredFields.has(key))
+        .map(([key, value]) => (
+          <Descriptions.Item key={key} label={structuredFieldLabels[key] ?? key}>
+            {formatStructuredValue(value)}
+          </Descriptions.Item>
+        ))}
     </Descriptions>
   );
 }
@@ -31,6 +70,7 @@ export function ReviewDetailPage() {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [offlineOpen, setOfflineOpen] = useState(false);
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const [offlineSubmitting, setOfflineSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -80,7 +120,7 @@ export function ReviewDetailPage() {
           </div>
           <Button onClick={() => navigate(-1)}>返回列表</Button>
         </div>
-        <Card>
+        <Card className="work-panel">
           <Empty description={errorText || '未找到审核详情'} />
         </Card>
       </div>
@@ -121,22 +161,7 @@ export function ReviewDetailPage() {
             </>
           ) : null}
           {canOffline ? (
-            <Button
-              danger
-              loading={offlineSubmitting}
-              onClick={async () => {
-                setOfflineSubmitting(true);
-                try {
-                  await offlineReview(detail.id, '内容过期或人工下架');
-                  await message.success('已执行下架');
-                  navigate('/online');
-                } catch (error) {
-                  await message.error(error instanceof Error ? error.message : '下架失败');
-                } finally {
-                  setOfflineSubmitting(false);
-                }
-              }}
-            >
+            <Button danger onClick={() => setOfflineOpen(true)}>
               手动下架
             </Button>
           ) : null}
@@ -144,8 +169,8 @@ export function ReviewDetailPage() {
       </div>
       <Row gutter={16}>
         <Col span={16}>
-          <Card loading={loading} title="内容详情">
-            <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+          <Card className="work-panel" loading={loading} title="内容详情">
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <Space>
                 <Tag color={detail.type === 'SERVICE' ? 'green' : 'gold'}>{detail.type}</Tag>
                 {detail.serviceCategory ? <Tag>{detail.serviceCategory}</Tag> : null}
@@ -162,12 +187,12 @@ export function ReviewDetailPage() {
               </Image.PreviewGroup>
             </Space>
           </Card>
-          <Card title="结构化字段" style={{ marginTop: 16 }}>
+          <Card className="work-panel" title="结构化字段" style={{ marginTop: 16 }}>
             {renderStructuredFieldBlock(detail)}
           </Card>
         </Col>
         <Col span={8}>
-          <Card title="发布者信息">
+          <Card className="work-panel" title="发布者信息">
             <Descriptions column={1} size="small">
               <Descriptions.Item label="昵称">
                 {detail.author?.id ? (
@@ -184,7 +209,7 @@ export function ReviewDetailPage() {
               <Descriptions.Item label="微信号">{detail.contact?.wechatId || '未填写'}</Descriptions.Item>
             </Descriptions>
           </Card>
-          <Card title="审核记录" style={{ marginTop: 16 }}>
+          <Card className="work-panel" title="审核记录" style={{ marginTop: 16 }}>
             <Timeline
               items={(detail.reviewLogs.length ? detail.reviewLogs : [{ id: 'pending', action: 'PENDING', createdAt: detail.createdAt, reason: null }]).map((item) => ({
                 content: (
@@ -217,6 +242,31 @@ export function ReviewDetailPage() {
               await message.error(error instanceof Error ? error.message : '拒绝失败');
             } finally {
               setRejectSubmitting(false);
+            }
+          }}
+        />
+      ) : null}
+      {canOffline ? (
+        <RejectReasonModal
+          open={offlineOpen}
+          loading={offlineSubmitting}
+          title="填写下架原因"
+          fieldLabel="下架原因"
+          okText="确认下架"
+          defaultReason="内容过期或不适合继续展示"
+          placeholder="例如：服务信息已过期、联系方式无效、内容不适合继续展示"
+          onCancel={() => setOfflineOpen(false)}
+          onConfirm={async (reason) => {
+            setOfflineSubmitting(true);
+            try {
+              await offlineReview(detail.id, reason);
+              await message.success('已执行下架');
+              setOfflineOpen(false);
+              navigate('/online');
+            } catch (error) {
+              await message.error(error instanceof Error ? error.message : '下架失败');
+            } finally {
+              setOfflineSubmitting(false);
             }
           }}
         />

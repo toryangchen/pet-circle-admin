@@ -91,6 +91,41 @@ describe('admin review flow pages', () => {
     expect(screen.queryByRole('button', { name: '手动下架' })).not.toBeInTheDocument();
   });
 
+  it('renders structured service fields with operator-facing labels', async () => {
+    mockFetchReviewDetail.mockResolvedValue({
+      id: 'post-1',
+      type: 'SERVICE',
+      serviceCategory: 'HOME_FEEDING',
+      status: 'PENDING',
+      title: '待审核上门喂养',
+      content: '内容',
+      city: '西安',
+      images: [],
+      author: null,
+      contact: null,
+      homeFeedingDetail: {
+        id: 'detail-1',
+        postId: 'post-1',
+        serviceArea: '雁塔区',
+        availableTime: '周末全天',
+        price: '80 元/次',
+      },
+      boardingDetail: null,
+      adoptionDetail: null,
+      secondHandDetail: null,
+      reviewLogs: [],
+      createdAt: '2026-04-01T00:00:00.000Z',
+      updatedAt: '2026-04-01T00:00:00.000Z',
+    });
+
+    renderWithApp(<ReviewDetailPage />);
+
+    expect(await screen.findByText('服务区域')).toBeInTheDocument();
+    expect(screen.getByText('可服务时间')).toBeInTheDocument();
+    expect(screen.getByText('价格')).toBeInTheDocument();
+    expect(screen.queryByText('serviceArea')).not.toBeInTheDocument();
+  });
+
   it('shows offline action only for approved posts', async () => {
     mockFetchReviewDetail.mockResolvedValue({
       id: 'post-1',
@@ -197,7 +232,7 @@ describe('admin review flow pages', () => {
     });
   });
 
-  it('offlines an approved post and returns to the online list', async () => {
+  it('requires an offline reason before offlining an approved post', async () => {
     mockFetchReviewDetail.mockResolvedValue({
       id: 'post-1',
       type: 'SERVICE',
@@ -226,8 +261,16 @@ describe('admin review flow pages', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '手动下架' }));
 
+    const reasonInput = await screen.findByLabelText('下架原因');
+    fireEvent.change(reasonInput, {
+      target: {
+        value: '服务信息已过期，人工下架',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认下架' }));
+
     await waitFor(() => {
-      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '内容过期或人工下架');
+      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '服务信息已过期，人工下架');
       expect(mockNavigate).toHaveBeenCalledWith('/online');
     });
   });
@@ -332,12 +375,20 @@ describe('admin review flow pages', () => {
     renderWithApp(<ReviewDetailPage />);
 
     fireEvent.click(await screen.findByRole('button', { name: '手动下架' }));
+    const reasonInput = await screen.findByLabelText('下架原因');
+    fireEvent.change(reasonInput, {
+      target: {
+        value: '服务信息已过期，人工下架',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认下架' }));
 
     await waitFor(() => {
-      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '内容过期或人工下架');
+      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '服务信息已过期，人工下架');
       expect(mockMessageError).toHaveBeenCalledWith('下架失败');
     });
-    expect(screen.getByRole('button', { name: /手动下架/ })).not.toHaveClass('ant-btn-loading');
+    expect(screen.getByText('填写下架原因')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '确认下架' })).not.toBeDisabled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -369,6 +420,58 @@ describe('admin review flow pages', () => {
         page: 1,
         pageSize: 20,
         type: 'SERVICE',
+        serviceCategory: undefined,
+      });
+    });
+  });
+
+  it('requires an offline reason before offlining from the online posts list', async () => {
+    mockFetchOnlinePosts.mockResolvedValue({
+      items: [
+        {
+          id: 'post-1',
+          title: '已上线闲置',
+          type: 'SERVICE',
+          serviceCategory: 'SECOND_HAND',
+          author: {
+            id: 'user-1',
+            nickname: '发布者',
+            phone: '13812345678',
+          },
+          status: 'APPROVED',
+          city: '西安',
+          createdAt: '2026-04-01T00:00:00.000Z',
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      hasMore: false,
+    });
+    mockOfflineReview.mockResolvedValue({
+      id: 'post-1',
+      status: 'OFFLINE',
+    });
+
+    renderWithApp(<OnlinePostsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '手动下架' }));
+    const reasonInput = await screen.findByLabelText('下架原因');
+    fireEvent.change(reasonInput, {
+      target: {
+        value: '服务信息已过期，人工下架',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '确认下架' }));
+
+    await waitFor(() => {
+      expect(mockOfflineReview).toHaveBeenCalledWith('post-1', '服务信息已过期，人工下架');
+    });
+    await waitFor(() => {
+      expect(mockFetchOnlinePosts).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 20,
+        type: undefined,
         serviceCategory: undefined,
       });
     });

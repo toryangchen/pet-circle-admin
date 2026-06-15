@@ -6,7 +6,11 @@ type RejectReasonModalProps = {
   loading?: boolean;
   onCancel: () => void;
   onConfirm: (reason: string) => Promise<void> | void;
+  title?: string;
+  fieldLabel?: string;
+  okText?: string;
   defaultReason?: string;
+  placeholder?: string;
 };
 
 export function RejectReasonModal({
@@ -14,7 +18,11 @@ export function RejectReasonModal({
   loading,
   onCancel,
   onConfirm,
+  title = '填写拒绝原因',
+  fieldLabel = '拒绝原因',
+  okText = '确认拒绝',
   defaultReason = '内容信息不足，建议补充后重新提交',
+  placeholder = '例如：联系方式缺失、结构化字段不完整、标题与内容不符',
 }: RejectReasonModalProps) {
   const [form] = Form.useForm<{ reason: string }>();
 
@@ -27,8 +35,8 @@ export function RejectReasonModal({
   return (
     <Modal
       open={open}
-      title="填写拒绝原因"
-      okText="确认拒绝"
+      title={title}
+      okText={okText}
       cancelText="取消"
       confirmLoading={loading}
       onCancel={onCancel}
@@ -40,16 +48,16 @@ export function RejectReasonModal({
     >
       <Form form={form} layout="vertical">
         <Form.Item
-          label="拒绝原因"
+          label={fieldLabel}
           name="reason"
           rules={[
-            { required: true, message: '请填写拒绝原因' },
-            { min: 4, message: '拒绝原因至少 4 个字' },
+            { required: true, message: `请填写${fieldLabel}` },
+            { min: 4, message: `${fieldLabel}至少 4 个字` },
           ]}
         >
           <Input.TextArea
             rows={4}
-            placeholder="例如：联系方式缺失、结构化字段不完整、标题与内容不符"
+            placeholder={placeholder}
             maxLength={120}
             showCount
           />
